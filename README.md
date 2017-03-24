@@ -1,2 +1,2 @@
 # PythonScriptForWork
-Those are scripts that used for my work
+Those are scripts that used in my work
