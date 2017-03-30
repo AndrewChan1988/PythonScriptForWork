@@ -59,15 +59,16 @@ if __name__ == '__main__':
     while True:
         price = searchtickets_vanilla()
         date = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_path = "D:\SearchTicket\\tickets.txt"
+        file_name = datetime.now().strftime("%Y%m%d")
+        file_path = "D:\SearchTicket\\price_{0}.txt".format(file_name)
         if price is not None:
             with open(file_path, 'a') as f:
                 f.write("{0}    {1}\n".format(price, date))
             price = int(price.replace(',', '').strip("HKD").strip())
             if price <= 1000:
-                sendemail(mailto_list, "票价通知！！！", content="香草航空机票的价格已经低于1000港币")
-                print("香草航空机票的价格已经低于1000港币")
+                sendemail(mailto_list, "票价通知！！！", content="香草航空机票的价格已经低于1000港币，价格是{0}港币".format(price))
+                print("香草航空机票的价格已经低于1000港币，价格是{0}港币".format(price))
             else:
-                print("现在机票还是太贵了")
+                print("现在机票还是太贵了，价格是{0}港币".format(price))
         else:
             print("加载超时，未能显示页面")

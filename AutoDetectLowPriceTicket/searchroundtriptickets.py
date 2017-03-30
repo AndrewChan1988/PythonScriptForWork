@@ -8,6 +8,7 @@ import smtplib
 from email.mime.text import MIMEText
 from datetime import *
 import threading
+import time
 
 
 mailto_list = ["297520702@qq.com"]
@@ -71,49 +72,66 @@ def searchtickets_vanilla():
             print("加载超时，未能显示页面")
 
 
-def searchtickets_jetstar():
+def searchtickets_hkexpress():
     while True:
-        price_jetstar = ""
-        jetstar_session_generate_url = r"http://www.jetstar.com/hk/zh/home?origin=KIX&destination=HKG" \
-                                       r"&adult=1&children=0&infants=0&flexible=1&departure-date=08-10-2017"
-        jetstar_url = r"https://book.jetstar.com/Select.aspx"
-        price_xpath = r'//*[@id="main"]/div[6]/div[2]/div[1]/table/tbody/tr[1]/td[4]/div[1]/label'
-        button_xpath = r'//*[@id="flightsearch-form"]/div[7]/div/div[2]/div[2]/button'
-        driver = webdriver.PhantomJS(executable_path=phantomjs_path, desired_capabilities=dcap)
-        driver_getprice = webdriver.PhantomJS(executable_path=phantomjs_path, desired_capabilities=dcap)
-        driver_getprice.set_page_load_timeout(200)
+        price = {}
+        chromedrive_path = r'C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe'
+        driver = webdriver.Chrome(executable_path=chromedrive_path, desired_capabilities=dcap)
+        driver.set_page_load_timeout(15)
         try:
-            driver.get(jetstar_session_generate_url)
-            button = WebDriverWait(driver, 300).until(
-                EC.presence_of_element_located((By.XPATH, button_xpath))
+            driver.get('http://www.hkexpress.com/zh-cn')
+        except Exception as e:
+            print(e)
+
+        try:
+            # 选择单程
+            element_oneway = driver.find_element_by_xpath(r'//*[@id="single"]')
+            element_oneway.click()
+            # 点击出发地，显示出发地列表
+            element_originfrom = driver.find_element_by_xpath(r'//*[@id="OriginFrom"]')
+            element_originfrom.click()
+            # 等待2秒，因为出发地列表为蒙层动画，等待其加载完
+            time.sleep(2)
+            # 选择大阪机场
+            element_from = driver.find_element_by_xpath(r'//*[@id="airportFrom"]/div[4]/a[6]')
+            element_from.click()
+            # 点击目的地，显示目的地列表
+            element_destination = driver.find_element_by_xpath(r'//*[@id="DestinationTo"]')
+            element_destination.click()
+            # 等待2秒，因为目的地列表为蒙层动画，等待其加载完
+            time.sleep(2)
+            # 选择香港机场
+            element_to = driver.find_element_by_xpath(r'//*[@id="airportTo"]/div[1]/a[1]')
+            element_to.click()
+            # 输入返程日期
+            element_date = driver.find_element_by_xpath(r'//*[@id="DepartureDate"]')
+            element_date.send_keys('08/10/2017')
+            # 等待2秒
+            time.sleep(2)
+            # 点击搜寻
+            element_submit = driver.find_element_by_xpath(r'//*[@id="search_flight"]/div/div[2]/div[4]/input')
+            element_submit.click()
+            # 等待2秒
+            time.sleep(2)
+            # 跳转到另一页面，切换到另一个页面
+            driver.switch_to_window(driver.window_handles[0])
+        except Exception as e:
+            print(e)
+        finally:
+            pass
+
+        try:
+            element_price_one = driver.find_element_by_xpath(
+                r'//*[@id="select_departure"]/table/tbody/tr[2]/td[4]/label/span[1]')
+            element_price_one_time = driver.find_element_by_xpath(
+                r'//*[@id="select_departure"]/table/tbody/tr[2]/td[1]/strong'
             )
-            button.click()
-            driver_getprice.get(jetstar_url)
-            element = WebDriverWait(driver_getprice, 300).until(
-                EC.presence_of_element_located((By.XPATH, price_xpath))
-            )
-            price_jetstar = element.text
+            price[element_price_one.text.strip(',').strip('JPY').strip()] = element_price_one_time.text
+            print(price)
         except Exception as e:
             print(e)
         finally:
             driver.quit()
-            driver_getprice.quit()
-
-        date_jetstar = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_name = datetime.now().strftime("%Y%m%d")
-        file_path = "D:\SearchTicket\\jetstar\\price_{0}.txt".format(file_name)
-        if price_jetstar is not None:
-            with open(file_path, 'a') as f:
-                f.write("{0}    {1}\n".format(price_jetstar, date_jetstar))
-            print(price_jetstar)
-            price_jetstar = int(price_jetstar.replace(',', '').strip("¥").strip())
-            if price_jetstar <= 15000:
-                sendemail(mailto_list, "票价通知！！！", content="捷星航空机票的价格已经低于15000日元，价格是{0}日元".format(price_jetstar))
-                print("香草航空机票的价格已经低于15000日元，价格是{0}日元".format(price_jetstar))
-            else:
-                print("现在机票还是太贵了，价格是{0}日元".format(price_jetstar))
-        else:
-            print("加载超时，未能显示页面")
 
 
 if __name__ == '__main__':
@@ -123,7 +141,7 @@ if __name__ == '__main__':
     threads = []
     t1 = threading.Thread(target=searchtickets_vanilla)
     threads.append(t1)
-    t2 = threading.Thread(target=searchtickets_jetstar)
+    t2 = threading.Thread(target=searchtickets_hkexpress)
     threads.append(t2)
     for t in threads:
         t.start()
